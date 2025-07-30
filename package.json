@@ -1,0 +1,30 @@
+{
+  "name": "greencart",
+  "version": "1.0.0",
+  "description": "Modern e-commerce platform for grocery shopping with React frontend and Node.js backend",
+  "private": true,
+  "scripts": {
+    "build": "./build.sh",
+    "vercel-build": "./build.sh",
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "install:all": "npm install && cd client && npm install && cd ../server && npm install",
+    "build:all": "cd client && npm run build && cd ../server && npm run build",
+    "deploy:setup": "./deploy.sh",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [
+    "e-commerce",
+    "grocery",
+    "react",
+    "nodejs",
+    "mongodb",
+    "vercel"
+  ],
+  "author": "GreenCart Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
