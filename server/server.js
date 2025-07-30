@@ -76,6 +76,9 @@ const corsOptions = {
 // Apply CORS before other middleware
 app.use(cors(corsOptions));
 
+// Handle CORS preflight requests
+app.options('*', cors(corsOptions));
+
 // Parse cookies
 app.use(cookieParser());
 
