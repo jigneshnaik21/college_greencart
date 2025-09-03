@@ -26,6 +26,7 @@ const app = express();
 const allowedOrigins = [
   "https://greencartfrontend-zeta.vercel.app",
   "https://greencartfrontend-git-clean-main-jignesh-naiks-projects.vercel.app",
+  "https://client-b6m8phwr8-jignesh-naiks-projects.vercel.app",
 ];
 
 const corsOptions = {
