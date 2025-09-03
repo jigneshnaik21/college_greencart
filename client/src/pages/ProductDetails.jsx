@@ -5,7 +5,8 @@ import { assets } from "../assets/assets";
 import ProductCard from "../components/ProductCard";
 
 const ProductDetails = () => {
-  const { products, navigate, currency, addToCart, user } = useAppContext();
+  const { products, navigate, currency, addToCart, user, setShowUserLogin } =
+    useAppContext();
   const { id } = useParams();
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [thumbnail, setThumbnail] = useState(null);
@@ -98,7 +99,11 @@ const ProductDetails = () => {
             <div className="flex items-center mt-10 gap-4 text-base">
               <button
                 onClick={() => {
-                  addToCart(product._id);
+                  if (!user) {
+                    setShowUserLogin(true);
+                  } else {
+                    addToCart(product._id);
+                  }
                 }}
                 className="w-full py-3.5 cursor-pointer font-medium bg-gray-100 text-gray-800/80 hover:bg-gray-200 transition"
               >
@@ -106,8 +111,12 @@ const ProductDetails = () => {
               </button>
               <button
                 onClick={() => {
-                  addToCart(product._id);
-                  navigate("/cart");
+                  if (!user) {
+                    setShowUserLogin(true);
+                  } else {
+                    addToCart(product._id);
+                    navigate("/cart");
+                  }
                 }}
                 className="w-full py-3.5 cursor-pointer font-medium bg-primary text-white hover:bg-primary-dull transition"
               >

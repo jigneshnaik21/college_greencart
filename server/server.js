@@ -22,47 +22,25 @@ dotenv.config();
 
 const app = express();
 
-// CORS Configuration
+// CORS Configuration - explicit frontend origins, Authorization header allowed
+const allowedOrigins = [
+  "https://greencartfrontend-zeta.vercel.app",
+  "https://greencartfrontend-git-clean-main-jignesh-naiks-projects.vercel.app",
+];
+
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-
-    // Get the hostname from the origin
-    try {
-      const hostname = new URL(origin).hostname;
-      console.log("Request origin:", origin, "hostname:", hostname);
-
-      // Get allowed origins from environment variable
-      const allowedOrigins = process.env.CORS_ORIGINS 
-        ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
-        : [];
-
-      // Allow localhost, vercel.app domains, and custom domains
-      if (
-        hostname === "localhost" ||
-        hostname === "127.0.0.1" ||
-        hostname.endsWith(".vercel.app") ||
-        allowedOrigins.includes(origin) ||
-        // Add your custom domain here if you have one
-        hostname === "your-custom-domain.com"
-      ) {
-        callback(null, true);
-      } else {
-        // For production, you might want to be more restrictive
-        if (process.env.NODE_ENV === "production") {
-          console.log("CORS blocked origin:", origin);
-          callback(new Error("Not allowed by CORS"));
-        } else {
-          callback(null, true); // Allow in development
-        }
-      }
-    } catch (error) {
-      console.error("Error parsing origin:", error);
-      callback(null, true); // Allow in case of parsing error
-    }
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Allow localhost during dev
+    if (
+      origin.startsWith("http://localhost") ||
+      origin.startsWith("http://127.0.0.1")
+    )
+      return callback(null, true);
+    return callback(null, false);
   },
-  credentials: true,
+  credentials: false,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: [
     "Content-Type",
@@ -71,15 +49,18 @@ const corsOptions = {
     "Accept",
     "Origin",
   ],
+  optionsSuccessStatus: 204,
+  preflightContinue: false,
+  maxAge: 86400,
 };
 
 // Apply CORS before other middleware
 app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
-// Handle CORS preflight requests
-app.options('*', cors(corsOptions));
+// Remove permissive fallback CORS headers and cookie-centric settings
 
-// Parse cookies
+// Parse cookies (kept for non-auth features)
 app.use(cookieParser());
 
 // Parse JSON bodies
@@ -106,7 +87,7 @@ const connectServices = async () => {
   } catch (error) {
     console.error("Error connecting to services:", error);
     isConnected = false;
-    throw error;
+    console.log("Services connection failed, but continuing...");
   }
 };
 
@@ -124,7 +105,6 @@ app.use((err, req, res, next) => {
     timestamp: new Date().toISOString(),
   });
 
-  // Send error response
   res.status(err.status || 500).json({
     error: {
       message: err.message || "Internal Server Error",
@@ -183,14 +163,30 @@ app.get("/api/health", async (req, res) => {
         mongodb: isConnected,
         cloudinary: isConnected,
       },
+      cors: {
+        origins: allowedOrigins,
+        nodeEnv: process.env.NODE_ENV,
+        requestOrigin: req.headers.origin,
+      },
     });
   } catch (error) {
     res.status(500).json({
       status: "error",
       timestamp: new Date().toISOString(),
       error: error.message,
+      dbConnected: isConnected,
     });
   }
+});
+
+// CORS test endpoint
+app.get("/api/cors-test", (req, res) => {
+  res.json({
+    message: "CORS is working!",
+    timestamp: new Date().toISOString(),
+    requestOrigin: req.headers.origin,
+    allowedOrigins,
+  });
 });
 
 // API routes

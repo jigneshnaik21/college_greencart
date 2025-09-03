@@ -3,7 +3,15 @@ import User from "../models/User.js";
 // Update User CartData : /api/cart/update
 export const updateCart = async (req, res) => {
   try {
-    const { userId, cartItems } = req.body;
+    console.log("[CART][UPDATE] Headers:", req.headers);
+    console.log("[CART][UPDATE] Authorization:", req.headers.authorization);
+    console.log("[CART][UPDATE] req.userId:", req.userId);
+
+    const { cartItems } = req.body;
+    const userId = req.userId;
+    if (!userId) {
+      return res.json({ success: false, message: "Not Authorized" });
+    }
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { cartItems },
@@ -19,8 +27,16 @@ export const updateCart = async (req, res) => {
 // Add to cart : /api/cart/add
 export const addToCart = async (req, res) => {
   try {
+    console.log("[CART][ADD] Headers:", req.headers);
+    console.log("[CART][ADD] Authorization:", req.headers.authorization);
+    console.log("[CART][ADD] req.userId:", req.userId);
+
     const { productId } = req.body;
-    const userId = req.body.userId;
+    const userId = req.userId;
+
+    if (!userId) {
+      return res.json({ success: false, message: "Not Authorized" });
+    }
 
     console.log("Adding to cart:", { productId, userId });
 
@@ -63,7 +79,7 @@ export const addToCart = async (req, res) => {
     console.log("Updated user cart:", updatedUser.cartItems);
     res.json({ success: true, user: updatedUser });
   } catch (error) {
-    console.log(error.message);
+    console.log("[CART][ADD] Error:", error.message, error.stack);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -71,8 +87,16 @@ export const addToCart = async (req, res) => {
 // Remove from cart : /api/cart/remove
 export const removeFromCart = async (req, res) => {
   try {
+    console.log("[CART][REMOVE] Headers:", req.headers);
+    console.log("[CART][REMOVE] Authorization:", req.headers.authorization);
+    console.log("[CART][REMOVE] req.userId:", req.userId);
+
     const { productId } = req.body;
-    const userId = req.body.userId;
+    const userId = req.userId;
+
+    if (!userId) {
+      return res.json({ success: false, message: "Not Authorized" });
+    }
 
     const user = await User.findById(userId);
     if (!user) {
@@ -101,7 +125,7 @@ export const removeFromCart = async (req, res) => {
 
     res.json({ success: true, user: updatedUser });
   } catch (error) {
-    console.log(error.message);
+    console.log("[CART][REMOVE] Error:", error.message, error.stack);
     res.status(500).json({ success: false, message: error.message });
   }
 };

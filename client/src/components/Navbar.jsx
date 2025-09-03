@@ -25,6 +25,11 @@ const Navbar = () => {
       const { data } = await axios.get("/api/user/logout");
       if (data.success) {
         toast.success(data.message);
+        // Clear header-token auth
+        if (axios.defaults.headers.common["Authorization"]) {
+          delete axios.defaults.headers.common["Authorization"];
+        }
+        localStorage.removeItem("authToken");
         setUser(null);
         navigate("/");
       } else {

@@ -3,10 +3,35 @@ import { assets } from "../assets/assets";
 import { useAppContext } from "../context/AppContext";
 
 const ProductCard = ({ product }) => {
-  const { currency, addToCart, removeFromCart, getCartItems, navigate, user } =
-    useAppContext();
+  const {
+    currency,
+    addToCart,
+    removeFromCart,
+    getCartItems,
+    navigate,
+    user,
+    setShowUserLogin,
+  } = useAppContext();
 
   const cartItems = getCartItems() || {};
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  // Debug cart state
+  React.useEffect(() => {
+    console.log("🛒 ProductCard Debug - Product:", product.name);
+    console.log("🛒 ProductCard Debug - User:", user);
+    console.log("🛒 ProductCard Debug - Cart Items:", cartItems);
+    console.log("🛒 ProductCard Debug - This product in cart:", cartItems[product._id]);
+  }, [product._id, user, cartItems]);
+
+  // Mobile detection
+  React.useEffect(() => {
+    const mobileCheck =
+      /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
+    setIsMobile(mobileCheck);
+  }, []);
 
   const handleProductClick = () => {
     navigate(`/products/${product.category.toLowerCase()}/${product._id}`);
@@ -15,6 +40,15 @@ const ProductCard = ({ product }) => {
 
   const handleCartAction = (e, action) => {
     e.stopPropagation();
+    e.preventDefault();
+
+    console.log(
+      "📱 MOBILE DEBUG: Cart action triggered:",
+      action,
+      "for product:",
+      product.name
+    );
+
     if (action === "add") {
       addToCart(product._id);
     } else if (action === "remove") {
@@ -32,9 +66,21 @@ const ProductCard = ({ product }) => {
         <div className="relative pt-[100%] w-full overflow-hidden bg-gray-50">
           <img
             className="absolute top-0 left-0 w-full h-full object-contain p-4 transform hover:scale-105 transition-transform duration-200"
-            src={product.image[0]}
+            src={
+              product.image?.[0] ||
+              product.image ||
+              "https://via.placeholder.com/300x200/6C5CE7/FFFFFF?text=Product"
+            }
             alt={product.name}
             loading="lazy"
+            onError={(e) => {
+              console.log(
+                "📱 MOBILE DEBUG: Image failed to load for:",
+                product.name
+              );
+              e.target.src =
+                "https://via.placeholder.com/300x200/6C5CE7/FFFFFF?text=Product";
+            }}
           />
         </div>
 
@@ -80,8 +126,19 @@ const ProductCard = ({ product }) => {
             <div onClick={(e) => e.stopPropagation()} className="text-primary">
               {!user ? (
                 <button
-                  className="flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 active:bg-primary/30 border border-primary/40 px-4 py-2 rounded-lg transition-colors"
-                  onClick={(e) => handleCartAction(e, "add")}
+                  className={`flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 active:bg-primary/30 border border-primary/40 px-4 py-2 rounded-lg transition-colors ${
+                    isMobile ? "touch-manipulation" : ""
+                  }`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    console.log("📱 MOBILE DEBUG: Login button clicked");
+                    setShowUserLogin(true);
+                  }}
+                  style={{
+                    WebkitTapHighlightColor: "transparent",
+                    touchAction: "manipulation",
+                  }}
                 >
                   <img
                     src={assets.cart_icon}
@@ -92,8 +149,14 @@ const ProductCard = ({ product }) => {
                 </button>
               ) : !cartItems || !cartItems[product._id] ? (
                 <button
-                  className="flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 active:bg-primary/30 border border-primary/40 px-4 py-2 rounded-lg transition-colors"
+                  className={`flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 active:bg-primary/30 border border-primary/40 px-4 py-2 rounded-lg transition-colors ${
+                    isMobile ? "touch-manipulation" : ""
+                  }`}
                   onClick={(e) => handleCartAction(e, "add")}
+                  style={{
+                    WebkitTapHighlightColor: "transparent",
+                    touchAction: "manipulation",
+                  }}
                 >
                   <img
                     src={assets.cart_icon}
@@ -106,16 +169,30 @@ const ProductCard = ({ product }) => {
                 <div className="flex items-center bg-primary/10 rounded-lg">
                   <button
                     onClick={(e) => handleCartAction(e, "remove")}
-                    className="w-10 h-10 flex items-center justify-center text-xl font-medium hover:bg-primary/20 active:bg-primary/30 rounded-l-lg transition-colors"
+                    className={`w-10 h-10 flex items-center justify-center text-xl font-medium hover:bg-primary/20 active:bg-primary/30 rounded-l-lg transition-colors ${
+                      isMobile ? "touch-manipulation" : ""
+                    }`}
+                    style={{
+                      WebkitTapHighlightColor: "transparent",
+                      touchAction: "manipulation",
+                    }}
                   >
                     −
                   </button>
                   <span className="w-8 text-center font-medium">
-                    {cartItems && cartItems[product._id] ? cartItems[product._id].quantity : 0}
+                    {cartItems && cartItems[product._id]
+                      ? cartItems[product._id].quantity
+                      : 0}
                   </span>
                   <button
                     onClick={(e) => handleCartAction(e, "add")}
-                    className="w-10 h-10 flex items-center justify-center text-xl font-medium hover:bg-primary/20 active:bg-primary/30 rounded-r-lg transition-colors"
+                    className={`w-10 h-10 flex items-center justify-center text-xl font-medium hover:bg-primary/20 active:bg-primary/30 rounded-r-lg transition-colors ${
+                      isMobile ? "touch-manipulation" : ""
+                    }`}
+                    style={{
+                      WebkitTapHighlightColor: "transparent",
+                      touchAction: "manipulation",
+                    }}
                   >
                     +
                   </button>
