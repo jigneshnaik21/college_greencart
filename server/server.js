@@ -29,6 +29,7 @@ const allowedOrigins = [
   "https://client-b6m8phwr8-jignesh-naiks-projects.vercel.app",
   "https://client-nins504a7-jignesh-naiks-projects.vercel.app",
   "https://client-lc55izmae-jignesh-naiks-projects.vercel.app",
+  "https://client-1yftisowa-jignesh-naiks-projects.vercel.app",
 ];
 
 const corsOptions = {
@@ -39,7 +40,11 @@ const corsOptions = {
       if (allowedOrigins.includes(origin)) return callback(null, true);
       if (hostname.endsWith(".vercel.app")) return callback(null, true);
       // Allow localhost during dev
-      if (origin.startsWith("http://localhost") || origin.startsWith("http://127.0.0.1")) return callback(null, true);
+      if (
+        origin.startsWith("http://localhost") ||
+        origin.startsWith("http://127.0.0.1")
+      )
+        return callback(null, true);
       return callback(null, false);
     } catch (e) {
       return callback(null, false);
@@ -47,7 +52,13 @@ const corsOptions = {
   },
   credentials: false,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Accept",
+    "Origin",
+  ],
   optionsSuccessStatus: 204,
   preflightContinue: false,
   maxAge: 86400,
