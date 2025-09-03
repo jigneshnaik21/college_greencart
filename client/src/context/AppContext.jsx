@@ -99,7 +99,7 @@ if (isMobile()) {
 
 // Get the backend URL from environment variables or construct it dynamically
 const getBackendUrl = () => {
-  // Check for environment variable first
+  // Check for environment variable first - this should be the primary source
   if (import.meta.env.VITE_API_URL) {
     console.log("Using VITE_API_URL:", import.meta.env.VITE_API_URL);
     return import.meta.env.VITE_API_URL;
@@ -115,41 +115,11 @@ const getBackendUrl = () => {
     return "http://localhost:4000";
   }
 
-  // For production, use the primary backend URL (matches cookie domain)
-  const backendUrls = [
-    "https://greencartbackend-jignesh-naiks-projects.vercel.app",
-  ];
-
-  // Enhanced mobile debugging and URL selection
-  const isMobileDevice = isMobile();
-  console.log("🔍 MOBILE DEBUG: Device detection result:", isMobileDevice);
-  console.log("🔍 MOBILE DEBUG: User Agent:", navigator.userAgent);
-  console.log("🔍 MOBILE DEBUG: Screen width:", window.innerWidth);
-
-  if (isMobileDevice) {
-    console.log("🔍 MOBILE DEBUG: Device detected, checking backend URLs");
-    console.log("🔍 MOBILE DEBUG: Available backend URLs:", backendUrls);
-
-    // Check cached URL first
-    const cachedUrl = sessionStorage.getItem("mobile_backend_url");
-    if (cachedUrl && backendUrls.includes(cachedUrl)) {
-      console.log("✅ MOBILE DEBUG: Using cached backend URL:", cachedUrl);
-      return cachedUrl;
-    }
-
-    // For mobile, use the primary backend URL
-    const selectedUrl = backendUrls[0];
-    console.log("✅ MOBILE DEBUG: Selected backend URL:", selectedUrl);
-
-    // Cache the selected URL for mobile
-    sessionStorage.setItem("mobile_backend_url", selectedUrl);
-
-    return selectedUrl;
-  }
-
-  // Desktop fallback
-  console.log("Desktop detected, using primary backend URL");
-  return backendUrls[0];
+  // For production, use the deployed backend URL
+  const productionBackendUrl =
+    "https://server-nkzr97txs-jignesh-naiks-projects.vercel.app";
+  console.log("Using production backend URL:", productionBackendUrl);
+  return productionBackendUrl;
 };
 
 // Initialize backend URL and configure axios
