@@ -9,3 +9,6 @@ server/.env
 client/.env.local
 .vercel/
 .DS_Store
+
+# Secrets
+server/.env.backup
