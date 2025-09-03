@@ -28,6 +28,7 @@ const allowedOrigins = [
   "https://greencartfrontend-git-clean-main-jignesh-naiks-projects.vercel.app",
   "https://client-b6m8phwr8-jignesh-naiks-projects.vercel.app",
   "https://client-nins504a7-jignesh-naiks-projects.vercel.app",
+  "https://client-lc55izmae-jignesh-naiks-projects.vercel.app",
 ];
 
 const corsOptions = {
@@ -55,8 +56,6 @@ const corsOptions = {
 // Apply CORS before other middleware
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
-
-// Remove permissive fallback CORS headers and cookie-centric settings
 
 // Parse cookies (kept for non-auth features)
 app.use(cookieParser());
