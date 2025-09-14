@@ -22,6 +22,8 @@ const allowedOrigins = [
   "https://greencart-e4ir18b3o-jignesh-naiks-projects.vercel.app",
   "https://greencart-pbnjdyp86-jignesh-naiks-projects.vercel.app",
   "https://greencart-nkuj9fc96-jignesh-naiks-projects.vercel.app",
+  "https://greencart-edj759srf-jignesh-naiks-projects.vercel.app",
+  "https://greencart-6flbdbwqy-jignesh-naiks-projects.vercel.app",
   // Add localhost for development
   "http://localhost:5173",
   "http://localhost:3000",
