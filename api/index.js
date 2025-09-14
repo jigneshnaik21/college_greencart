@@ -1,14 +1,14 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { connectDB } from "../server/db.js";
-import { connectCloudinary } from "../server/cloudinary.js";
-import userRoute from "../server/routes/userRoute.js";
-import sellerRoute from "../server/routes/sellerRoute.js";
-import productRoute from "../server/routes/productRoute.js";
-import cartRoute from "../server/routes/cartRoute.js";
-import addressRoute from "../server/routes/addressRoute.js";
-import orderRoute from "../server/routes/orderRoute.js";
+import { connectDB } from "./configs/db.js";
+import { connectCloudinary } from "./configs/cloudinary.js";
+import userRoute from "./routes/userRoute.js";
+import sellerRoute from "./routes/sellerRoute.js";
+import productRoute from "./routes/productRoute.js";
+import cartRoute from "./routes/cartRoute.js";
+import addressRoute from "./routes/addressRoute.js";
+import orderRoute from "./routes/orderRoute.js";
 
 const app = express();
 
