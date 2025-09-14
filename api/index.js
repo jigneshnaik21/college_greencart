@@ -132,7 +132,7 @@ app.get("/api/product/list", async (req, res) => {
         name: "Fresh Organic Tomatoes",
         price: 2.99,
         originalPrice: 3.99,
-        image: "https://images.unsplash.com/photo-1546470429-70c9b4a7de98?w=300&h=300&fit=crop",
+        image: "https://picsum.photos/300/200?random=1",
         category: "Organic veggies",
         rating: 4.5,
         reviews: 120,
@@ -144,7 +144,7 @@ app.get("/api/product/list", async (req, res) => {
         name: "Sweet Red Apples",
         price: 1.99,
         originalPrice: 2.49,
-        image: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=300&h=300&fit=crop",
+        image: "https://picsum.photos/300/200?random=2",
         category: "Fresh Fruits",
         rating: 4.8,
         reviews: 95,
@@ -156,7 +156,7 @@ app.get("/api/product/list", async (req, res) => {
         name: "Fresh Carrots",
         price: 1.49,
         originalPrice: 1.99,
-        image: "https://images.unsplash.com/photo-1445282768818-728615cc910a?w=300&h=300&fit=crop",
+        image: "https://picsum.photos/300/200?random=3",
         category: "Organic veggies",
         rating: 4.3,
         reviews: 87,
@@ -168,7 +168,7 @@ app.get("/api/product/list", async (req, res) => {
         name: "Banana Bunch",
         price: 2.49,
         originalPrice: 2.99,
-        image: "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=300&h=300&fit=crop",
+        image: "https://picsum.photos/300/200?random=4",
         category: "Fresh Fruits",
         rating: 4.6,
         reviews: 156,
@@ -180,7 +180,7 @@ app.get("/api/product/list", async (req, res) => {
         name: "Fresh Spinach",
         price: 1.99,
         originalPrice: 2.49,
-        image: "https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=300&h=300&fit=crop",
+        image: "https://picsum.photos/300/200?random=5",
         category: "Organic veggies",
         rating: 4.4,
         reviews: 73,
@@ -192,7 +192,7 @@ app.get("/api/product/list", async (req, res) => {
         name: "Orange Juice",
         price: 3.99,
         originalPrice: 4.99,
-        image: "https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=300&h=300&fit=crop",
+        image: "https://picsum.photos/300/200?random=6",
         category: "Cold Drinks",
         rating: 4.2,
         reviews: 45,
@@ -399,6 +399,100 @@ app.get("/api/user/logout", async (req, res) => {
     res.status(500).json({
       status: "error",
       message: "Failed to process logout",
+      error: error.message
+    });
+  }
+});
+
+// Cart endpoints
+app.post("/api/cart/add", async (req, res) => {
+  try {
+    await initializeConnections();
+    
+    const { productId, quantity = 1 } = req.body;
+    
+    if (!productId) {
+      return res.status(400).json({
+        success: false,
+        message: "Product ID is required"
+      });
+    }
+    
+    // Mock cart addition - in real app, store in database
+    res.status(200).json({
+      success: true,
+      message: "Product added to cart successfully",
+      data: {
+        productId,
+        quantity,
+        cartItem: {
+          productId,
+          quantity,
+          addedAt: new Date().toISOString()
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Add to cart error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to add product to cart",
+      error: error.message
+    });
+  }
+});
+
+app.post("/api/cart/remove", async (req, res) => {
+  try {
+    await initializeConnections();
+    
+    const { productId } = req.body;
+    
+    if (!productId) {
+      return res.status(400).json({
+        success: false,
+        message: "Product ID is required"
+      });
+    }
+    
+    // Mock cart removal - in real app, remove from database
+    res.status(200).json({
+      success: true,
+      message: "Product removed from cart successfully",
+      data: {
+        productId,
+        removedAt: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error("Remove from cart error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to remove product from cart",
+      error: error.message
+    });
+  }
+});
+
+app.get("/api/cart", async (req, res) => {
+  try {
+    await initializeConnections();
+    
+    // Mock cart data - in real app, fetch from database
+    res.status(200).json({
+      success: true,
+      data: {
+        items: [],
+        totalItems: 0,
+        totalPrice: 0
+      },
+      message: "Cart retrieved successfully"
+    });
+  } catch (error) {
+    console.error("Get cart error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve cart",
       error: error.message
     });
   }
