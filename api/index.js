@@ -186,6 +186,94 @@ app.get("/api/seller/is-auth", async (req, res) => {
   }
 });
 
+// User login endpoint
+app.post("/api/user/login", async (req, res) => {
+  try {
+    await initializeConnections();
+    
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({
+        status: "error",
+        message: "Email and password are required"
+      });
+    }
+    
+    // For now, return a mock response
+    // In a real implementation, you would validate credentials against the database
+    res.status(200).json({
+      status: "success",
+      data: {
+        message: "Login endpoint working - implement actual authentication",
+        email: email
+      }
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Failed to process login",
+      error: error.message
+    });
+  }
+});
+
+// User register endpoint
+app.post("/api/user/register", async (req, res) => {
+  try {
+    await initializeConnections();
+    
+    const { name, email, password } = req.body;
+    
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        status: "error",
+        message: "Name, email and password are required"
+      });
+    }
+    
+    // For now, return a mock response
+    // In a real implementation, you would create a new user in the database
+    res.status(201).json({
+      status: "success",
+      data: {
+        message: "Register endpoint working - implement actual user creation",
+        user: { name, email }
+      }
+    });
+  } catch (error) {
+    console.error("Register error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Failed to process registration",
+      error: error.message
+    });
+  }
+});
+
+// User logout endpoint
+app.get("/api/user/logout", async (req, res) => {
+  try {
+    await initializeConnections();
+    
+    // For now, return a mock response
+    res.status(200).json({
+      status: "success",
+      data: {
+        message: "Logout endpoint working"
+      }
+    });
+  } catch (error) {
+    console.error("Logout error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Failed to process logout",
+      error: error.message
+    });
+  }
+});
+
 // Catch-all handler for undefined routes
 app.use("*", (req, res) => {
   res.status(404).json({
