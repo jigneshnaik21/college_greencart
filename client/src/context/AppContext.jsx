@@ -1,4 +1,11 @@
-import { createContext, useState, useEffect, useContext } from "react";
+import {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+  useCallback,
+  useRef,
+} from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
@@ -30,16 +37,16 @@ const isMobile = () => {
   return mobileCheck;
 };
 
-// Configure axios defaults
+// Configure axios defaults - Keep consistent across all devices
 axios.defaults.withCredentials = false;
 
-// Enhanced cookie handling for mobile
+// Mobile-specific configuration (without changing credentials)
 if (isMobile()) {
-  console.log("🔍 MOBILE DEBUG: Configuring enhanced cookie handling");
-  // Ensure cookies are sent with requests
-  axios.defaults.withCredentials = true;
-  // Add mobile-specific headers for better cookie handling
+  console.log("🔍 MOBILE DEBUG: Configuring mobile-specific settings");
+  // Add mobile-specific headers for better request handling
   axios.defaults.headers.common["X-Requested-With"] = "XMLHttpRequest";
+  // Add mobile user agent for better backend detection
+  axios.defaults.headers.common["X-Mobile-Client"] = "true";
 }
 
 // Emergency mobile toast override - runs before any other code
@@ -50,10 +57,10 @@ if (
 ) {
   console.log("Mobile device detected, setting up emergency toast override");
 
-  // Override toast.error globally for mobile
+  // Override toast.error globally for mobile - Allow ALL authentication errors
   const originalToastError = toast.error;
   toast.error = (message) => {
-    // Allow login-related errors to show on mobile
+    // Allow ALL authentication and login-related errors to show on mobile
     if (
       typeof message === "string" &&
       (message.includes("Login") ||
@@ -61,23 +68,31 @@ if (
         message.includes("Invalid password") ||
         message.includes("Backend connection") ||
         message.includes("Login timeout") ||
-        message.includes("Server error"))
+        message.includes("Server error") ||
+        message.includes("Not Authorized") ||
+        message.includes("Authentication") ||
+        message.includes("Token") ||
+        message.includes("Please login") ||
+        message.includes("User not found") ||
+        message.includes("Unauthorized"))
     ) {
-      console.log("Mobile login error allowed:", message);
+      console.log("🔍 MOBILE DEBUG: Authentication error allowed:", message);
       return originalToastError(message);
     }
 
+    // Only block generic network errors, not authentication errors
     if (
       typeof message === "string" &&
-      (message.includes("Network") ||
-        message.includes("connection") ||
-        message.includes("check your") ||
-        message.includes("timeout") ||
+      (message.includes("Network issue") ||
+        message.includes("check your connection") ||
         message.includes("Server not responding"))
     ) {
-      console.log("Mobile toast blocked:", message);
-      return; // Don't show any network-related errors on mobile
+      console.log("🔍 MOBILE DEBUG: Generic network error blocked:", message);
+      return; // Don't show generic network errors on mobile
     }
+
+    // Allow all other errors
+    console.log("🔍 MOBILE DEBUG: Other error allowed:", message);
     return originalToastError(message);
   };
 }
@@ -95,6 +110,11 @@ if (isMobile()) {
   // Add retry logic for mobile
   axios.defaults.retry = 1; // Single retry to avoid spam
   axios.defaults.retryDelay = 3000; // Increased delay between retries
+}
+
+// Desktop-specific configuration: sensible timeout
+if (!isMobile()) {
+  axios.defaults.timeout = 12000; // 12 seconds for desktop
 }
 
 // Get the backend URL from environment variables or construct it dynamically
@@ -115,10 +135,10 @@ const getBackendUrl = () => {
     return "http://localhost:4000";
   }
 
-  // For production, use the deployed backend URL
-  const productionBackendUrl =
-    "https://server-nkzr97txs-jignesh-naiks-projects.vercel.app";
-  console.log("Using production backend URL:", productionBackendUrl);
+  // For production, use localhost for now due to Vercel auth protection
+  // This is a temporary solution until Vercel protection is disabled
+  const productionBackendUrl = "http://localhost:4000";
+  console.log("Using local backend URL:", productionBackendUrl);
   return productionBackendUrl;
 };
 
@@ -143,12 +163,54 @@ const initializeBackendUrl = () => {
 // Initialize backend URL properly
 initializeBackendUrl();
 
+// Function to test backend connectivity and switch if needed
+const testBackendConnectivity = async () => {
+  try {
+    console.log("🔍 Testing backend connectivity...");
+    const response = await axios.get("/api/health", { timeout: 10000 });
+    console.log("✅ Backend connectivity test successful:", response.data);
+    return true;
+  } catch (error) {
+    console.error("❌ Backend connectivity test failed:", error);
+
+    // If it's a CORS error, try switching backend URL
+    if (error.message.includes("CORS") || error.code === "ERR_NETWORK") {
+      console.log(
+        "🔍 CORS error detected, attempting to switch backend URL..."
+      );
+      const currentUrl = axios.defaults.baseURL;
+      switchBackendUrl(currentUrl);
+
+      // Test the new backend URL
+      try {
+        const newResponse = await axios.get("/api/health", { timeout: 10000 });
+        console.log(
+          "✅ New backend URL connectivity test successful:",
+          newResponse.data
+        );
+        return true;
+      } catch (newError) {
+        console.error("❌ New backend URL also failed:", newError);
+        return false;
+      }
+    }
+
+    return false;
+  }
+};
+
 // Function to switch backend URL on mobile
 const switchBackendUrl = (failedUrl) => {
   if (!isMobile()) return;
 
   const backendUrls = [
     "https://greencartbackend-jignesh-naiks-projects.vercel.app",
+    "https://server-pjq7wob83-jignesh-naiks-projects.vercel.app",
+    "https://server-nkzr97txs-jignesh-naiks-projects.vercel.app",
+    "https://server-9vj776kdf-jignesh-naiks-projects.vercel.app",
+    "https://server-dyafl2lpt-jignesh-naiks-projects.vercel.app",
+    "https://server-kj1mqg95q-jignesh-naiks-projects.vercel.app",
+    "https://server-etg1zczbl-jignesh-naiks-projects.vercel.app",
   ];
 
   const currentIndex = backendUrls.indexOf(failedUrl);
@@ -176,6 +238,41 @@ axios.interceptors.response.use(
   async (error) => {
     const { config } = error;
 
+    // Log detailed error information for debugging
+    console.error("🔍 ERROR DEBUG:", {
+      message: error.message,
+      code: error.code,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      url: error.config?.url,
+      method: error.config?.method,
+      baseURL: error.config?.baseURL,
+      origin: window.location.origin,
+      isCORS: error.message.includes("CORS") || error.code === "ERR_NETWORK",
+    });
+
+    // Handle CORS errors specifically
+    if (error.message.includes("CORS") || error.code === "ERR_NETWORK") {
+      console.error("🔍 CORS ERROR DETECTED - Attempting to resolve...");
+
+      // Try switching backend URL for CORS issues
+      if (error.config && error.config.baseURL) {
+        console.log("🔍 Attempting to switch backend URL due to CORS error");
+        switchBackendUrl(error.config.baseURL);
+
+        // Retry the request with new backend URL
+        if (config && !config.__isRetryRequest) {
+          config.__isRetryRequest = true;
+          console.log("🔍 Retrying request with new backend URL");
+
+          // Wait a bit before retrying
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+
+          return axios(config);
+        }
+      }
+    }
+
     // Retry logic for mobile devices
     if (isMobile() && config && !config.__isRetryRequest) {
       config.__isRetryRequest = true;
@@ -193,6 +290,25 @@ axios.interceptors.response.use(
         );
 
         return axios(config);
+      }
+    }
+
+    // Desktop retry with exponential backoff for transient network/timeout errors
+    if (!isMobile() && config) {
+      const isTransient =
+        error.code === "ECONNABORTED" ||
+        error.code === "ERR_NETWORK" ||
+        (typeof error.message === "string" &&
+          error.message.includes("timeout"));
+
+      if (isTransient) {
+        config.__retryCount = config.__retryCount || 0;
+        if (config.__retryCount < 2) {
+          config.__retryCount += 1;
+          const delayMs = Math.pow(2, config.__retryCount) * 500; // 1s, 2s
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+          return axios(config);
+        }
       }
     }
 
@@ -262,17 +378,49 @@ export const AppContextProvider = ({ children }) => {
   const [cartLoading, setCartLoading] = useState(false);
   const [mobileNetworkStatus, setMobileNetworkStatus] = useState("checking");
   const [isOfflineMode, setIsOfflineMode] = useState(false);
+  const [backendUp, setBackendUp] = useState(true);
+  const isCheckingUserRef = useRef(false);
+  const isCheckingSellerRef = useRef(false);
+  const isFetchingProductsRef = useRef(false);
+  const userAbortRef = useRef(null);
+  const sellerAbortRef = useRef(null);
+  const productsAbortRef = useRef(null);
 
-  // Token management
-  const getToken = () => localStorage.getItem("authToken");
+  // Enhanced token management for mobile compatibility
+  const getToken = () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      console.log(
+        "🔍 MOBILE DEBUG: Token retrieved:",
+        token ? "Present" : "Missing"
+      );
+      return token;
+    } catch (error) {
+      console.error("🔍 MOBILE DEBUG: Error accessing localStorage:", error);
+      return null;
+    }
+  };
+
   const setToken = (token) => {
-    if (token) {
-      localStorage.setItem("authToken", token);
-      // Set Authorization header for all future requests
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    } else {
-      localStorage.removeItem("authToken");
-      delete axios.defaults.headers.common["Authorization"];
+    try {
+      if (token) {
+        localStorage.setItem("authToken", token);
+        // Set Authorization header for all future requests
+        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        console.log("🔍 MOBILE DEBUG: Token set successfully");
+      } else {
+        localStorage.removeItem("authToken");
+        delete axios.defaults.headers.common["Authorization"];
+        console.log("🔍 MOBILE DEBUG: Token cleared");
+      }
+    } catch (error) {
+      console.error("🔍 MOBILE DEBUG: Error managing token:", error);
+      // Fallback: still set the header even if localStorage fails
+      if (token) {
+        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      } else {
+        delete axios.defaults.headers.common["Authorization"];
+      }
     }
   };
 
@@ -291,6 +439,46 @@ export const AppContextProvider = ({ children }) => {
         "🔍 MOBILE DEBUG: Device detected, setting up for mobile usage"
       );
       setMobileNetworkStatus("connected");
+
+      // Mobile-specific authentication recovery
+      const recoverMobileAuth = async () => {
+        try {
+          const token = getToken();
+          if (token) {
+            console.log("🔍 MOBILE DEBUG: Attempting authentication recovery");
+            // Test if token is still valid
+            const response = await axios.get("/api/user/is-auth", {
+              timeout: 10000,
+            });
+            if (response.data.success) {
+              console.log(
+                "🔍 MOBILE DEBUG: Authentication recovery successful"
+              );
+              setUser(response.data.user);
+            } else {
+              console.log("🔍 MOBILE DEBUG: Token invalid, clearing");
+              setToken(null);
+              setUser(null);
+            }
+          }
+        } catch (error) {
+          console.log(
+            "🔍 MOBILE DEBUG: Authentication recovery failed:",
+            error.message
+          );
+          // Don't clear token on network errors, only on auth errors
+          if (
+            error.response?.status === 401 ||
+            error.response?.status === 403
+          ) {
+            setToken(null);
+            setUser(null);
+          }
+        }
+      };
+
+      // Run authentication recovery after a short delay
+      setTimeout(recoverMobileAuth, 1000);
 
       // Test mobile connectivity
       const testMobileConnectivity = async () => {
@@ -380,7 +568,9 @@ export const AppContextProvider = ({ children }) => {
   }, []);
 
   // Check user authentication status
-  const checkUser = async () => {
+  const checkUser = useCallback(async () => {
+    if (isCheckingUserRef.current) return;
+    isCheckingUserRef.current = true;
     try {
       console.log("🔍 MOBILE DEBUG: Starting checkUser API call");
       console.log(
@@ -399,7 +589,13 @@ export const AppContextProvider = ({ children }) => {
         return;
       }
 
-      const response = await axios.get("/api/user/is-auth");
+      if (userAbortRef.current) {
+        userAbortRef.current.abort();
+      }
+      userAbortRef.current = new AbortController();
+      const response = await axios.get("/api/user/is-auth", {
+        signal: userAbortRef.current.signal,
+      });
       console.log("✅ MOBILE DEBUG: checkUser response:", response.data);
 
       if (response.data.success) {
@@ -420,32 +616,60 @@ export const AppContextProvider = ({ children }) => {
         config: error.config,
       });
 
-      // On mobile, fail silently for network errors
+      // On mobile, only suppress generic network errors, not authentication errors
       if (
         isMobile() &&
-        (error.code === "ECONNABORTED" || error.message.includes("Network"))
+        (error.code === "ECONNABORTED" || error.message.includes("Network")) &&
+        !error.response // Only suppress if there's no response (pure network error)
       ) {
-        console.log("🔇 MOBILE DEBUG: Network error suppressed for checkUser");
-        return; // Don't set user to null on mobile network errors
+        console.log(
+          "🔇 MOBILE DEBUG: Pure network error suppressed for checkUser"
+        );
+        return; // Don't set user to null on pure network errors
       }
+
+      // For authentication errors (401, 403, etc.), always clear user and token
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        console.log(
+          "🔍 MOBILE DEBUG: Authentication error detected, clearing user"
+        );
+        setUser(null);
+        setToken(null);
+        return;
+      }
+
       setUser(null);
       setToken(null); // Clear token on error
+    } finally {
+      isCheckingUserRef.current = false;
     }
-  };
+  }, []);
 
   // Check seller status
-  const checkSeller = async () => {
+  const checkSeller = useCallback(async () => {
+    if (isCheckingSellerRef.current) return;
+    isCheckingSellerRef.current = true;
     try {
-      const response = await axios.get("/api/seller/is-auth");
+      if (sellerAbortRef.current) {
+        sellerAbortRef.current.abort();
+      }
+      sellerAbortRef.current = new AbortController();
+      const response = await axios.get("/api/seller/is-auth", {
+        signal: sellerAbortRef.current.signal,
+      });
       setIsSeller(response.data.isSeller);
     } catch (error) {
       console.error("Error fetching seller status:", error);
       setIsSeller(false);
+    } finally {
+      isCheckingSellerRef.current = false;
     }
-  };
+  }, []);
 
   // Fetch products
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
+    if (isFetchingProductsRef.current) return;
+    isFetchingProductsRef.current = true;
     try {
       console.log("🔍 MOBILE DEBUG: Starting fetchProducts API call");
       console.log(
@@ -457,7 +681,13 @@ export const AppContextProvider = ({ children }) => {
         `${axios.defaults.baseURL}/api/product/list`
       );
 
-      const response = await axios.get("/api/product/list");
+      if (productsAbortRef.current) {
+        productsAbortRef.current.abort();
+      }
+      productsAbortRef.current = new AbortController();
+      const response = await axios.get("/api/product/list", {
+        signal: productsAbortRef.current.signal,
+      });
       console.log("✅ MOBILE DEBUG: fetchProducts response:", {
         success: response.data.success,
         productCount: response.data.data?.length || 0,
@@ -498,11 +728,12 @@ export const AppContextProvider = ({ children }) => {
       }
     } finally {
       setLoading(false);
+      isFetchingProductsRef.current = false;
       console.log(
         "🔍 MOBILE DEBUG: fetchProducts completed, loading set to false"
       );
     }
-  };
+  }, [products.length]);
 
   // Get cart count function
   const getCartCount = () => {
@@ -765,6 +996,19 @@ export const AppContextProvider = ({ children }) => {
     const initializeApp = async () => {
       try {
         setLoading(true);
+
+        // Test backend connectivity first
+        const isConnected = await testBackendConnectivity();
+        setBackendUp(!!isConnected);
+        if (!isConnected) {
+          toast.error("Backend unavailable. Some features may be limited.");
+        }
+        if (!isConnected) {
+          console.warn(
+            "⚠️ Backend connectivity test failed, proceeding with limited functionality"
+          );
+        }
+
         await Promise.all([checkUser(), checkSeller(), fetchProducts()]);
       } catch (error) {
         console.error("Error initializing app:", error);
@@ -808,10 +1052,28 @@ export const AppContextProvider = ({ children }) => {
         mobileNetworkStatus,
         isOfflineMode,
         setIsOfflineMode,
+        backendUp,
         currency,
         navigate,
         axios,
         setToken,
+        testBackendConnectivity,
+        // Mobile debugging function
+        debugMobileAuth: () => {
+          if (isMobile()) {
+            console.log("🔍 MOBILE AUTH DEBUG:");
+            console.log("- User:", user);
+            console.log("- Token:", getToken() ? "Present" : "Missing");
+            console.log(
+              "- Auth Header:",
+              axios.defaults.headers.common["Authorization"]
+            );
+            console.log("- Base URL:", axios.defaults.baseURL);
+            console.log("- With Credentials:", axios.defaults.withCredentials);
+            console.log("- User Agent:", navigator.userAgent);
+            console.log("- Screen Width:", window.innerWidth);
+          }
+        },
       }}
     >
       {children}

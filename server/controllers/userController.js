@@ -40,28 +40,43 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
+    console.log("🔍 LOGIN DEBUG: Login request received");
+    console.log("🔍 LOGIN DEBUG: Request body:", { email: req.body.email, password: req.body.password ? "***" : "missing" });
+    console.log("🔍 LOGIN DEBUG: User agent:", req.headers["user-agent"]);
+    console.log("🔍 LOGIN DEBUG: Origin:", req.headers.origin);
+    
     const { email, password } = req.body;
 
-    if (!email || !password)
+    if (!email || !password) {
+      console.log("🔍 LOGIN DEBUG: Missing email or password");
       return res.json({
         success: false,
         message: "Email and password are required",
       });
+    }
+    
+    console.log("🔍 LOGIN DEBUG: Looking up user with email:", email);
     const user = await User.findOne({ email });
 
     if (!user) {
+      console.log("🔍 LOGIN DEBUG: User not found for email:", email);
       return res.json({ success: false, message: "Invalid email or password" });
     }
 
+    console.log("🔍 LOGIN DEBUG: User found, checking password");
     const isMatch = await bcrypt.compare(password, user.password);
 
-    if (!isMatch)
+    if (!isMatch) {
+      console.log("🔍 LOGIN DEBUG: Password mismatch for user:", email);
       return res.json({ success: false, message: "Invalid email or password" });
+    }
 
+    console.log("🔍 LOGIN DEBUG: Password match, generating token");
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
 
+    console.log("🔍 LOGIN DEBUG: Login successful for user:", email);
     // Return token in response body instead of cookie for Authorization header auth
     return res.json({
       success: true,
@@ -69,7 +84,7 @@ export const login = async (req, res) => {
       token: token,
     });
   } catch (error) {
-    console.log(error.message);
+    console.error("🔍 LOGIN DEBUG: Login error:", error);
     res.json({ success: false, message: error.message });
   }
 };

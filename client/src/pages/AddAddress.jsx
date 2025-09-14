@@ -42,8 +42,52 @@ const AddAddress = () => {
 
   const onSubmitHandler = async (e) => {
     e.preventDefault();
+    
+    // Debug logging
+    console.log('🔍 ADDRESS DEBUG: User context:', user);
+    console.log('🔍 ADDRESS DEBUG: User ID:', user?._id || user?.id);
+    console.log('🔍 ADDRESS DEBUG: Address data:', address);
+    
+    // Check if user is authenticated
+    if (!user || !user._id) {
+      toast.error("Please login to add an address");
+      navigate("/cart");
+      return;
+    }
+    
+    // Client-side validation
+    const requiredFields = ['firstName', 'lastName', 'email', 'street', 'city', 'state', 'zipcode', 'country', 'phone'];
+    const missingFields = requiredFields.filter(field => !address[field] || address[field].trim() === '');
+    
+    if (missingFields.length > 0) {
+      toast.error(`Please fill in all required fields: ${missingFields.join(', ')}`);
+      return;
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(address.email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    
+    // Validate phone number (basic validation)
+    if (address.phone.length < 10) {
+      toast.error("Please enter a valid phone number");
+      return;
+    }
+    
     try {
-      const { data } = await axios.post("/api/address/add", { address });
+      const requestPayload = { 
+        address: {
+          ...address,
+          userId: user._id // Include the user ID
+        }
+      };
+      
+      console.log('🔍 ADDRESS DEBUG: Request payload:', requestPayload);
+      
+      const { data } = await axios.post("/api/address/add", requestPayload);
 
       if (data.success) {
         toast.success(data.message);
@@ -52,15 +96,22 @@ const AddAddress = () => {
         toast.error(data.message);
       }
     } catch (error) {
-      toast.error(error.message);
+      console.error('🔍 ADDRESS DEBUG: Error details:', error);
+      toast.error(error.response?.data?.message || error.message || "Failed to add address");
     }
   };
 
   useEffect(() => {
     if (!user) {
+      toast.error("Please login to add an address");
       navigate("/cart");
+      return;
     }
-  }, []);
+    
+    // Debug logging on component mount
+    console.log('🔍 ADDRESS DEBUG: Component mounted with user:', user);
+    console.log('🔍 ADDRESS DEBUG: User ID available:', user?._id || user?.id);
+  }, [user, navigate]);
 
   return (
     <div className="mt-16 pb-16">

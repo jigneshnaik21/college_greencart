@@ -1,37 +1,47 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useAppContext } from "../context/AppContext";
-import { dummyOrders } from "../assets/assets";
 
 const MyOrders = () => {
   const [myOrders, setMyOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const { currency, axios, user } = useAppContext();
 
-  const fetchMyOrders = async () => {
+  const fetchMyOrders = useCallback(async () => {
     try {
+      setLoading(true);
+      setError(null);
       console.log("Fetching orders for user:", user._id);
       console.log("User object:", user);
-      
-      const { data } = await axios.get("/api/order/user");
+
+      // Send userId in request body as expected by backend
+      const { data } = await axios.post("/api/order/user", {
+        userId: user._id,
+      });
       console.log("Orders response:", data);
-      
+
       if (data.success) {
         setMyOrders(data.orders);
         console.log("Set orders:", data.orders);
         console.log("Orders length:", data.orders.length);
       } else {
+        setError(data.message);
         console.log("Orders request failed:", data.message);
       }
     } catch (error) {
       console.error("Error fetching orders:", error);
       console.error("Error details:", error.response?.data);
+      setError(error.response?.data?.message || error.message);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [user, axios]);
 
   useEffect(() => {
     if (user) {
       fetchMyOrders();
     }
-  }, [user]);
+  }, [user, fetchMyOrders]);
 
   return (
     <div className="mt-16 pb-16">
@@ -39,19 +49,38 @@ const MyOrders = () => {
         <p className="text-2xl font-medium uppercase">My orders</p>
         <div className="w-16 h-0.5 bg-primary rounded-full"></div>
       </div>
-      
+
       {/* Debug info */}
       <div className="mb-4 p-4 bg-gray-100 rounded">
         <p>User ID: {user?._id}</p>
         <p>Orders count: {myOrders.length}</p>
-        <button 
+        <p>User authenticated: {user ? "Yes" : "No"}</p>
+        <p>
+          Authorization header:{" "}
+          {axios.defaults.headers.common["Authorization"]
+            ? "Present"
+            : "Missing"}
+        </p>
+        <p>Loading: {loading ? "Yes" : "No"}</p>
+        {error && <p className="text-red-500">Error: {error}</p>}
+        <button
           onClick={fetchMyOrders}
-          className="bg-blue-500 text-white px-4 py-2 rounded"
+          disabled={loading}
+          className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
         >
-          Refresh Orders
+          {loading ? "Loading..." : "Refresh Orders"}
         </button>
       </div>
-      
+
+      {myOrders.length === 0 && !loading && !error && (
+        <div className="text-center py-8">
+          <p className="text-gray-500 text-lg">No orders found</p>
+          <p className="text-gray-400">
+            Place your first order to see it here!
+          </p>
+        </div>
+      )}
+
       {myOrders.map((order, index) => (
         <div
           key={index}

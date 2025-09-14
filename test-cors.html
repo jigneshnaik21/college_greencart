@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CORS Test</title>
+  </head>
+  <body>
+    <h1>CORS Test for GreenCart Backend</h1>
+    <div id="results"></div>
+
+    <script>
+      const resultsDiv = document.getElementById("results");
+
+      function addResult(message, isError = false) {
+        const div = document.createElement("div");
+        div.style.padding = "10px";
+        div.style.margin = "5px";
+        div.style.border = "1px solid #ccc";
+        div.style.backgroundColor = isError ? "#ffebee" : "#e8f5e8";
+        div.style.color = isError ? "#c62828" : "#2e7d32";
+        div.textContent = message;
+        resultsDiv.appendChild(div);
+      }
+
+      async function testCORS() {
+        const backendUrl =
+          "https://server-dyafl2lpt-jignesh-naiks-projects.vercel.app";
+
+        addResult("Testing CORS configuration...");
+        addResult(`Frontend Origin: ${window.location.origin}`);
+        addResult(`Backend URL: ${backendUrl}`);
+
+        try {
+          // Test 1: Simple GET request
+          addResult("Test 1: Testing simple GET request...");
+          const response1 = await fetch(`${backendUrl}/api/health`);
+          const data1 = await response1.json();
+          addResult(`✅ Health check successful: ${data1.status}`);
+        } catch (error) {
+          addResult(`❌ Health check failed: ${error.message}`, true);
+        }
+
+        try {
+          // Test 2: CORS test endpoint
+          addResult("Test 2: Testing CORS test endpoint...");
+          const response2 = await fetch(`${backendUrl}/api/cors-test`);
+          const data2 = await response2.json();
+          addResult(`✅ CORS test successful: ${data2.message}`);
+        } catch (error) {
+          addResult(`❌ CORS test failed: ${error.message}`, true);
+        }
+
+        try {
+          // Test 3: CORS debug endpoint
+          addResult("Test 3: Testing CORS debug endpoint...");
+          const response3 = await fetch(`${backendUrl}/api/cors-debug`);
+          const data3 = await response3.json();
+          addResult(
+            `✅ CORS debug successful: Origin allowed: ${data3.cors.isOriginAllowed}`
+          );
+        } catch (error) {
+          addResult(`❌ CORS debug failed: ${error.message}`, true);
+        }
+
+        try {
+          // Test 4: Products endpoint
+          addResult("Test 4: Testing products endpoint...");
+          const response4 = await fetch(`${backendUrl}/api/product/list`);
+          const data4 = await response4.json();
+          addResult(
+            `✅ Products endpoint successful: ${
+              data4.data?.length || 0
+            } products`
+          );
+        } catch (error) {
+          addResult(`❌ Products endpoint failed: ${error.message}`, true);
+        }
+      }
+
+      // Run tests when page loads
+      window.addEventListener("load", testCORS);
+    </script>
+  </body>
+</html>

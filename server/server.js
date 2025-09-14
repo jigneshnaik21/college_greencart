@@ -30,23 +30,64 @@ const allowedOrigins = [
   "https://client-nins504a7-jignesh-naiks-projects.vercel.app",
   "https://client-lc55izmae-jignesh-naiks-projects.vercel.app",
   "https://client-1yftisowa-jignesh-naiks-projects.vercel.app",
+  // Add the current backend URL to allowed origins for CORS preflight
+  "https://server-maklt426l-jignesh-naiks-projects.vercel.app",
+  // Add the actual frontend URL being used
+  "https://client-bzlk0y5l1-jignesh-naiks-projects.vercel.app",
+  // Add the new frontend URL
+  "https://client-5qn7fdxo8-jignesh-naiks-projects.vercel.app",
+  // Add the current frontend URL from the error logs
+  "https://client-bqfsfffc2-jignesh-naiks-projects.vercel.app",
+  // Add the current backend URL from the error logs
+  "https://server-a3wb74u4l-jignesh-naiks-projects.vercel.app",
+  // Add the current frontend URL
+  "https://client-oyaqvkprf-jignesh-naiks-projects.vercel.app",
+  "https://client-hj1cuhd11-jignesh-naiks-projects.vercel.app",
+  "https://client-11bdpeo8k-jignesh-naiks-projects.vercel.app",
+  // Add localhost for development
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:3000",
 ];
 
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
+    // Log the origin for debugging
+    console.log("🔍 CORS DEBUG: Request origin:", origin);
+
+    if (!origin) {
+      console.log("🔍 CORS DEBUG: No origin, allowing");
+      return callback(null, true);
+    }
+
     try {
       const hostname = new URL(origin).hostname;
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      if (hostname.endsWith(".vercel.app")) return callback(null, true);
+      console.log("🔍 CORS DEBUG: Hostname:", hostname);
+
+      if (allowedOrigins.includes(origin)) {
+        console.log("🔍 CORS DEBUG: Origin in allowed list, allowing");
+        return callback(null, true);
+      }
+
+      if (hostname.endsWith(".vercel.app")) {
+        console.log("🔍 CORS DEBUG: Vercel app, allowing");
+        return callback(null, true);
+      }
+
       // Allow localhost during dev
       if (
         origin.startsWith("http://localhost") ||
         origin.startsWith("http://127.0.0.1")
-      )
+      ) {
+        console.log("🔍 CORS DEBUG: Localhost, allowing");
         return callback(null, true);
+      }
+
+      console.log("🔍 CORS DEBUG: Origin not allowed:", origin);
       return callback(null, false);
     } catch (e) {
+      console.error("🔍 CORS DEBUG: Error parsing origin:", e);
       return callback(null, false);
     }
   },
@@ -66,7 +107,59 @@ const corsOptions = {
 
 // Apply CORS before other middleware
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+
+// Enhanced CORS preflight handling
+app.options("*", (req, res) => {
+  console.log("🔍 CORS DEBUG: Preflight request received");
+  console.log("🔍 CORS DEBUG: Origin:", req.headers.origin);
+  console.log(
+    "🔍 CORS DEBUG: Method:",
+    req.headers["access-control-request-method"]
+  );
+  console.log(
+    "🔍 CORS DEBUG: Headers:",
+    req.headers["access-control-request-headers"]
+  );
+
+  // Set CORS headers
+  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-Requested-With, Accept, Origin"
+  );
+  res.header("Access-Control-Max-Age", "86400");
+  res.header("Access-Control-Allow-Credentials", "false");
+
+  res.status(204).end();
+});
+
+// Request logging middleware for debugging
+app.use((req, res, next) => {
+  console.log("🔍 REQUEST DEBUG:", {
+    method: req.method,
+    url: req.url,
+    origin: req.headers.origin,
+    userAgent: req.headers["user-agent"],
+    timestamp: new Date().toISOString(),
+  });
+
+  // Ensure CORS headers are always set for debugging
+  if (req.headers.origin) {
+    res.header("Access-Control-Allow-Origin", req.headers.origin);
+    res.header("Access-Control-Allow-Credentials", "false");
+    res.header(
+      "Access-Control-Allow-Methods",
+      "GET, POST, PUT, DELETE, OPTIONS"
+    );
+    res.header(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, X-Requested-With, Accept, Origin"
+    );
+  }
+
+  next();
+});
 
 // Parse cookies (kept for non-auth features)
 app.use(cookieParser());
@@ -194,7 +287,39 @@ app.get("/api/cors-test", (req, res) => {
     timestamp: new Date().toISOString(),
     requestOrigin: req.headers.origin,
     allowedOrigins,
+    corsConfig: {
+      credentials: corsOptions.credentials,
+      methods: corsOptions.methods,
+      allowedHeaders: corsOptions.allowedHeaders,
+    },
   });
+});
+
+// Enhanced CORS debugging endpoint
+app.get("/api/cors-debug", (req, res) => {
+  const requestInfo = {
+    timestamp: new Date().toISOString(),
+    method: req.method,
+    url: req.url,
+    headers: {
+      origin: req.headers.origin,
+      "user-agent": req.headers["user-agent"],
+      "access-control-request-method":
+        req.headers["access-control-request-method"],
+      "access-control-request-headers":
+        req.headers["access-control-request-headers"],
+    },
+    cors: {
+      allowedOrigins,
+      currentOrigin: req.headers.origin,
+      isOriginAllowed: allowedOrigins.includes(req.headers.origin),
+      isVercelApp: req.headers.origin?.includes(".vercel.app"),
+    },
+  };
+
+  console.log("🔍 CORS DEBUG ENDPOINT:", requestInfo);
+
+  res.json(requestInfo);
 });
 
 // API routes

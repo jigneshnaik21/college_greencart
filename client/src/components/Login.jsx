@@ -45,82 +45,17 @@ const Login = () => {
           axios.defaults.baseURL
         );
 
-        // Ensure we're using the correct backend URL for mobile
-        const mobileBackendUrl =
-          "https://greencartbackend-jignesh-naiks-projects.vercel.app";
+        // Use the current backend URL from AppContext (no need to override)
         console.log(
           "📱 MOBILE DEBUG: Current axios baseURL:",
           axios.defaults.baseURL
         );
         console.log(
-          "📱 MOBILE DEBUG: Target mobile backend URL:",
-          mobileBackendUrl
+          "📱 MOBILE DEBUG: Using current backend URL for mobile login"
         );
 
-        if (axios.defaults.baseURL !== mobileBackendUrl) {
-          console.log(
-            "📱 MOBILE DEBUG: Switching to mobile backend URL:",
-            mobileBackendUrl
-          );
-          axios.defaults.baseURL = mobileBackendUrl;
-          // Also update sessionStorage for consistency
-          sessionStorage.setItem("mobile_backend_url", mobileBackendUrl);
-        }
-
-        // Test backend connectivity first - try multiple endpoints
-        let healthCheckPassed = false;
-
-        try {
-          console.log("📱 MOBILE DEBUG: Testing backend connectivity...");
-          console.log(
-            "📱 MOBILE DEBUG: Using backend URL:",
-            axios.defaults.baseURL
-          );
-
-          // Try the health endpoint first
-          const healthCheck = await axios.get("/api/health", {
-            timeout: 10000,
-          });
-          console.log(
-            "📱 MOBILE DEBUG: Backend health check:",
-            healthCheck.data
-          );
-          healthCheckPassed = true;
-        } catch (healthError) {
-          console.error(
-            "📱 MOBILE DEBUG: Health endpoint failed:",
-            healthError
-          );
-
-          // Try a simple GET request to the root
-          try {
-            const rootCheck = await axios.get("/", {
-              timeout: 10000,
-            });
-            console.log(
-              "📱 MOBILE DEBUG: Root endpoint check:",
-              rootCheck.status
-            );
-            healthCheckPassed = true;
-          } catch (rootError) {
-            console.error(
-              "📱 MOBILE DEBUG: Root endpoint also failed:",
-              rootError
-            );
-
-            // Skip health check for mobile and proceed with login
-            console.log(
-              "📱 MOBILE DEBUG: Skipping health check, proceeding with login"
-            );
-            healthCheckPassed = true;
-          }
-        }
-
-        if (!healthCheckPassed) {
-          toast.error("Backend connection failed. Please try again.");
-          setIsSubmitting(false);
-          return;
-        }
+        // Skip health checks for mobile - proceed directly to login
+        console.log("📱 MOBILE DEBUG: Proceeding with mobile login (skipping health checks)");
       }
 
       const { data } = await axios.post(
@@ -142,22 +77,15 @@ const Login = () => {
         // Store the token
         setToken(data.token);
         setUser(data.user);
-        setShowUserLogin(false);
 
-        // Force a page reload to ensure cookies are properly set
-        if (isMobile) {
-          console.log(
-            "📱 MOBILE DEBUG: Reloading page to ensure cookies are set"
-          );
-          window.location.reload();
-        } else {
-          toast.success(
-            state === "login"
-              ? "Login successful!"
-              : "Account created successfully!"
-          );
-          navigate("/");
-        }
+        // Show success message and navigate
+        toast.success(
+          state === "login"
+            ? "Login successful!"
+            : "Account created successfully!"
+        );
+        setShowUserLogin(false);
+        navigate("/");
       } else {
         toast.error(data.message);
       }
@@ -170,26 +98,17 @@ const Login = () => {
         config: error.config,
       });
 
-      // Mobile-specific error handling
-      if (isMobile) {
-        if (
-          error.code === "ECONNABORTED" ||
-          error.message.includes("timeout")
-        ) {
-          toast.error(
-            "Login timeout. Please check your connection and try again."
-          );
-        } else if (error.response?.status === 401) {
-          toast.error("Invalid email or password. Please try again.");
-        } else if (error.response?.status === 500) {
-          toast.error("Server error. Please try again later.");
-        } else {
-          const errorMessage =
-            error.response?.data?.message || "Login failed. Please try again.";
-          toast.error(errorMessage);
-        }
+      // Enhanced error handling for both mobile and desktop
+      if (error.response?.status === 401) {
+        toast.error("Invalid email or password. Please try again.");
+      } else if (error.response?.status === 500) {
+        toast.error("Server error. Please try again later.");
+      } else if (error.code === "ECONNABORTED" || error.message.includes("timeout")) {
+        toast.error("Login timeout. Please check your connection and try again.");
+      } else if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
       } else {
-        const errorMessage = error.response?.data?.message || error.message;
+        const errorMessage = error.message || "Login failed. Please try again.";
         toast.error(errorMessage);
       }
     } finally {
