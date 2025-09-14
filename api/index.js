@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import jwt from "jsonwebtoken";
 import { connectDB } from "./configs/db.js";
 import { connectCloudinary } from "./configs/cloudinary.js";
 
@@ -236,7 +237,6 @@ app.get("/api/user/is-auth", async (req, res) => {
     }
     
     try {
-      const jwt = require('jsonwebtoken');
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       
       res.status(200).json({
@@ -307,7 +307,6 @@ app.post("/api/user/login", async (req, res) => {
     
     // Mock authentication - in real app, validate against database
     // For demo purposes, accept any email/password combination
-    const jwt = require('jsonwebtoken');
     const token = jwt.sign(
       { 
         userId: 'demo-user-123', 
@@ -353,7 +352,6 @@ app.post("/api/user/register", async (req, res) => {
     }
     
     // Mock registration - in real app, create user in database
-    const jwt = require('jsonwebtoken');
     const token = jwt.sign(
       { 
         userId: 'demo-user-123', 
