@@ -24,6 +24,13 @@ const allowedOrigins = [
   "https://client-5qn7fdxo8-jignesh-naiks-projects.vercel.app",
   "https://client-bqfsfffc2-jignesh-naiks-projects.vercel.app",
   "https://server-a3wb74u4l-jignesh-naiks-projects.vercel.app",
+  // Add the current frontend URL from the error logs
+  "https://greencart-e4ir18b3o-jignesh-naiks-projects.vercel.app",
+  // Add localhost for development
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:3000",
 ];
 
 const corsOptions = {

@@ -127,6 +127,7 @@ const getBackendUrl = () => {
 
   // Get the current hostname (IP address or domain)
   const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
   console.log("Current hostname:", hostname);
 
   // If accessing from localhost, use localhost
@@ -135,11 +136,17 @@ const getBackendUrl = () => {
     return "http://localhost:4000";
   }
 
-  // For production, use localhost for now due to Vercel auth protection
-  // This is a temporary solution until Vercel protection is disabled
-  const productionBackendUrl = "http://localhost:4000";
-  console.log("Using local backend URL:", productionBackendUrl);
-  return productionBackendUrl;
+  // For production, use the same domain as the frontend
+  if (hostname.includes("vercel.app")) {
+    const currentUrl = `${protocol}//${hostname}`;
+    console.log("Using current Vercel URL:", currentUrl);
+    return currentUrl;
+  }
+
+  // Fallback to current origin
+  const fallbackUrl = window.location.origin;
+  console.log("Using fallback URL:", fallbackUrl);
+  return fallbackUrl;
 };
 
 // Initialize backend URL and configure axios
@@ -204,6 +211,8 @@ const switchBackendUrl = (failedUrl) => {
   if (!isMobile()) return;
 
   const backendUrls = [
+    // Use the current deployment URL for API calls
+    "https://greencart-e4ir18b3o-jignesh-naiks-projects.vercel.app",
     "https://greencartbackend-jignesh-naiks-projects.vercel.app",
     "https://server-pjq7wob83-jignesh-naiks-projects.vercel.app",
     "https://server-nkzr97txs-jignesh-naiks-projects.vercel.app",

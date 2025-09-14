@@ -12,3 +12,4 @@ client/.env.local
 
 # Secrets
 server/.env.backup
+.vercel
