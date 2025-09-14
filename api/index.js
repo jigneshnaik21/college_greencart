@@ -3,12 +3,6 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { connectDB } from "./configs/db.js";
 import { connectCloudinary } from "./configs/cloudinary.js";
-import userRoute from "./routes/userRoute.js";
-import sellerRoute from "./routes/sellerRoute.js";
-import productRoute from "./routes/productRoute.js";
-import cartRoute from "./routes/cartRoute.js";
-import addressRoute from "./routes/addressRoute.js";
-import orderRoute from "./routes/orderRoute.js";
 
 const app = express();
 
@@ -26,6 +20,8 @@ const allowedOrigins = [
   "https://server-a3wb74u4l-jignesh-naiks-projects.vercel.app",
   // Add the current frontend URL from the error logs
   "https://greencart-e4ir18b3o-jignesh-naiks-projects.vercel.app",
+  "https://greencart-pbnjdyp86-jignesh-naiks-projects.vercel.app",
+  "https://greencart-nkuj9fc96-jignesh-naiks-projects.vercel.app",
   // Add localhost for development
   "http://localhost:5173",
   "http://localhost:3000",
@@ -49,266 +45,165 @@ const corsOptions = {
       const hostname = new URL(origin).hostname;
       console.log("Request origin:", origin, "hostname:", hostname);
 
-      // Check if origin is in allowed list
+      // Check if the origin is in the allowed list
       if (allowedOrigins.includes(origin)) {
-        console.log("🔍 CORS DEBUG: Origin in allowed list, allowing");
+        console.log("🔍 CORS DEBUG: Origin allowed:", origin);
         return callback(null, true);
       }
 
-      // Allow localhost and vercel.app domains
-      if (
-        hostname === "localhost" ||
-        hostname === "127.0.0.1" ||
-        hostname.endsWith(".vercel.app")
-      ) {
-        console.log("🔍 CORS DEBUG: Vercel app or localhost, allowing");
-        callback(null, true);
-      } else {
-        console.log("🔍 CORS DEBUG: Origin not allowed:", origin);
-        callback(new Error("Not allowed by CORS"));
+      // Check if it's a Vercel domain
+      if (hostname.includes("vercel.app")) {
+        console.log("🔍 CORS DEBUG: Vercel domain allowed:", origin);
+        return callback(null, true);
       }
+
+      console.log("🔍 CORS DEBUG: Origin not allowed:", origin);
+      return callback(new Error("Not allowed by CORS"));
     } catch (error) {
-      console.error("Error parsing origin:", error);
-      callback(null, true); // Allow in case of parsing error
+      console.log("🔍 CORS DEBUG: Error parsing origin:", error.message);
+      return callback(new Error("Invalid origin"));
     }
   },
-  credentials: false, // Changed to false to match frontend configuration
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "X-Requested-With",
-    "Accept",
-    "Origin",
-  ],
-  optionsSuccessStatus: 204,
-  preflightContinue: false,
+  credentials: false, // Set to false to match frontend configuration
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
 };
 
-// Apply CORS before other middleware
+// Middleware
 app.use(cors(corsOptions));
-
-// Enhanced CORS preflight handling
-app.options("*", (req, res) => {
-  console.log("🔍 CORS DEBUG: Preflight request received");
-  console.log("🔍 CORS DEBUG: Origin:", req.headers.origin);
-  console.log(
-    "🔍 CORS DEBUG: Method:",
-    req.headers["access-control-request-method"]
-  );
-  console.log(
-    "🔍 CORS DEBUG: Headers:",
-    req.headers["access-control-request-headers"]
-  );
-
-  // Set CORS headers
-  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, X-Requested-With, Accept, Origin"
-  );
-  res.header("Access-Control-Max-Age", "86400");
-  res.header("Access-Control-Allow-Credentials", "false");
-
-  res.status(204).end();
-});
-
-// Request logging middleware for debugging
-app.use((req, res, next) => {
-  console.log("🔍 REQUEST DEBUG:", {
-    method: req.method,
-    url: req.url,
-    origin: req.headers.origin,
-    userAgent: req.headers["user-agent"],
-    timestamp: new Date().toISOString(),
-  });
-
-  // Ensure CORS headers are always set for debugging
-  if (req.headers.origin) {
-    res.header("Access-Control-Allow-Origin", req.headers.origin);
-    res.header("Access-Control-Allow-Credentials", "false");
-    res.header(
-      "Access-Control-Allow-Methods",
-      "GET, POST, PUT, DELETE, OPTIONS"
-    );
-    res.header(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Authorization, X-Requested-With, Accept, Origin"
-    );
-  }
-
-  next();
-});
-
-// Parse cookies
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
-// Parse JSON bodies
-app.use(express.json());
+// Initialize database and cloudinary connections
+let dbConnected = false;
+let cloudinaryConnected = false;
 
-// Database connection state
-let isConnected = false;
-
-// Connect to services (database and Cloudinary)
-const connectServices = async () => {
+const initializeConnections = async () => {
   try {
-    if (!isConnected) {
-      console.log("Connecting to MongoDB...");
+    if (!dbConnected) {
       await connectDB();
-      console.log("Connected to MongoDB");
-
-      console.log("Connecting to Cloudinary...");
+      dbConnected = true;
+      console.log("✅ Database connected successfully");
+    }
+    if (!cloudinaryConnected) {
       await connectCloudinary();
-      console.log("Connected to Cloudinary");
-
-      isConnected = true;
-      console.log("All services connected successfully");
+      cloudinaryConnected = true;
+      console.log("✅ Cloudinary connected successfully");
     }
   } catch (error) {
-    console.error("Error connecting to services:", error);
-    isConnected = false;
-    throw error;
+    console.error("❌ Connection error:", error.message);
   }
 };
 
-// Health check endpoint (no auth required)
+// Health check endpoint
 app.get("/api/health", async (req, res) => {
   try {
-    await connectServices();
-    res.json({
-      status: "ok",
+    await initializeConnections();
+    res.status(200).json({
+      status: "success",
+      message: "Server is running",
       timestamp: new Date().toISOString(),
-      env: process.env.NODE_ENV,
-      dbConnected: isConnected,
-      services: {
-        mongodb: isConnected,
-        cloudinary: isConnected,
-      },
-      cors: {
-        origins: allowedOrigins,
-        nodeEnv: process.env.NODE_ENV,
-        requestOrigin: req.headers.origin,
-      },
+      database: dbConnected ? "connected" : "disconnected",
+      cloudinary: cloudinaryConnected ? "connected" : "disconnected"
     });
   } catch (error) {
+    console.error("Health check error:", error);
     res.status(500).json({
       status: "error",
-      timestamp: new Date().toISOString(),
-      error: error.message,
-      dbConnected: isConnected,
+      message: "Server error",
+      error: error.message
     });
   }
 });
 
-// CORS test endpoint
-app.get("/api/cors-test", (req, res) => {
-  res.json({
-    message: "CORS is working!",
-    timestamp: new Date().toISOString(),
-    requestOrigin: req.headers.origin,
-    allowedOrigins,
-    corsConfig: {
-      credentials: corsOptions.credentials,
-      methods: corsOptions.methods,
-      allowedHeaders: corsOptions.allowedHeaders,
-    },
-  });
+// Basic product list endpoint (simplified)
+app.get("/api/product/list", async (req, res) => {
+  try {
+    await initializeConnections();
+    
+    // For now, return empty array until we set up the full product system
+    res.status(200).json({
+      status: "success",
+      data: [],
+      message: "Products endpoint working"
+    });
+  } catch (error) {
+    console.error("Product list error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Failed to fetch products",
+      error: error.message
+    });
+  }
 });
 
-// Enhanced CORS debugging endpoint
-app.get("/api/cors-debug", (req, res) => {
-  const requestInfo = {
-    timestamp: new Date().toISOString(),
-    method: req.method,
-    url: req.url,
-    headers: {
-      origin: req.headers.origin,
-      "user-agent": req.headers["user-agent"],
-      "access-control-request-method":
-        req.headers["access-control-request-method"],
-      "access-control-request-headers":
-        req.headers["access-control-request-headers"],
-    },
-    cors: {
-      allowedOrigins,
-      currentOrigin: req.headers.origin,
-      isOriginAllowed: allowedOrigins.includes(req.headers.origin),
-      isVercelApp: req.headers.origin?.includes(".vercel.app"),
-    },
-  };
+// Basic user auth endpoint (simplified)
+app.get("/api/user/is-auth", async (req, res) => {
+  try {
+    await initializeConnections();
+    
+    // For now, return not authenticated
+    res.status(200).json({
+      status: "success",
+      data: {
+        isAuth: false,
+        user: null
+      },
+      message: "Auth endpoint working"
+    });
+  } catch (error) {
+    console.error("User auth error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Failed to check authentication",
+      error: error.message
+    });
+  }
+});
 
-  console.log("🔍 CORS DEBUG ENDPOINT:", requestInfo);
+// Basic seller auth endpoint (simplified)
+app.get("/api/seller/is-auth", async (req, res) => {
+  try {
+    await initializeConnections();
+    
+    // For now, return not authenticated
+    res.status(200).json({
+      status: "success",
+      data: {
+        isAuth: false,
+        seller: null
+      },
+      message: "Seller auth endpoint working"
+    });
+  } catch (error) {
+    console.error("Seller auth error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Failed to check seller authentication",
+      error: error.message
+    });
+  }
+});
 
-  res.json(requestInfo);
+// Catch-all handler for undefined routes
+app.use("*", (req, res) => {
+  res.status(404).json({
+    status: "error",
+    message: "Route not found",
+    path: req.originalUrl
+  });
 });
 
 // Error handling middleware
-app.use((err, req, res, next) => {
-  console.error("Error details:", {
-    message: err.message,
-    stack: err.stack,
-    url: req.url,
-    method: req.method,
-    body: req.body,
-    query: req.query,
-    params: req.params,
-    headers: req.headers,
-    timestamp: new Date().toISOString(),
-  });
-
-  // Send error response
-  res.status(err.status || 500).json({
-    error: {
-      message: err.message || "Internal Server Error",
-      type: err.name,
-      status: err.status || 500,
-      path: req.url,
-      timestamp: new Date().toISOString(),
-    },
+app.use((error, req, res, next) => {
+  console.error("Global error handler:", error);
+  res.status(500).json({
+    status: "error",
+    message: "Internal server error",
+    error: process.env.NODE_ENV === "development" ? error.message : "Something went wrong"
   });
 });
 
-// Wrap route handlers with error handling
-const asyncHandler = (fn) => async (req, res, next) => {
-  try {
-    await fn(req, res, next);
-  } catch (error) {
-    console.error("Route error:", {
-      route: req.path,
-      method: req.method,
-      error: error.message,
-      stack: error.stack,
-      timestamp: new Date().toISOString(),
-    });
-    next(error);
-  }
-};
-
-// Routes with connection check and error handling
-const routeHandler = (route) =>
-  asyncHandler(async (req, res, next) => {
-    try {
-      await connectServices();
-      await route(req, res, next);
-    } catch (error) {
-      console.error("Route handler error:", {
-        route: req.path,
-        method: req.method,
-        error: error.message,
-        stack: error.stack,
-        timestamp: new Date().toISOString(),
-      });
-      next(error);
-    }
-  });
-
-// API routes
-app.use("/api/user", routeHandler(userRoute));
-app.use("/api/seller", routeHandler(sellerRoute));
-app.use("/api/product", routeHandler(productRoute));
-app.use("/api/cart", routeHandler(cartRoute));
-app.use("/api/address", routeHandler(addressRoute));
-app.use("/api/order", routeHandler(orderRoute));
-
+// Export the app for Vercel
 export default app;
